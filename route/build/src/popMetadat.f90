@@ -97,7 +97,6 @@ contains
  meta_stateDims(ixStateDims%hru     ) = dim_info('hru',     integerMissing, integerMissing)  ! catchment hru vector
  meta_stateDims(ixStateDims%time    ) = dim_info('time',    integerMissing, integerMissing)  ! time
  meta_stateDims(ixStateDims%tbound  ) = dim_info('tbound',  integerMissing, 2)               ! time bound (alway 2 - start and end)
- meta_stateDims(ixStateDims%ens     ) = dim_info('ens',     integerMissing, integerMissing)  ! runoff ensemble
  meta_stateDims(ixStateDims%wave    ) = dim_info('wave',    integerMissing, MAXQPAR)         ! reach waves vector (max. number is defined as MAXQPAR)
  meta_stateDims(ixStateDims%mol_kw  ) = dim_info('mol_kw',  integerMissing, integerMissing)  ! kw finite difference computing nodes
  meta_stateDims(ixStateDims%mol_mc  ) = dim_info('mol_mc',  integerMissing, integerMissing)  ! mc finite difference computing nodes
@@ -250,34 +249,34 @@ contains
 
  ! ---------- populate segment restart metadata structures -------------------------------------------------------------------------------------------------------------------
  ! Lagrangian Kinematic Wave
- call meta_kwt(ixKWT%tentry   )%init('tentry'    , 'time when a wave enters a segment'             , 's'   , ncd_double, [ixStateDims%seg,ixStateDims%wave,ixStateDims%ens], .true.)
- call meta_kwt(ixKWT%texit    )%init('texit'     , 'time when a wave is expected to exit a segment', 's'   , ncd_double, [ixStateDims%seg,ixStateDims%wave,ixStateDims%ens], .true.)
- call meta_kwt(ixKWT%qwave    )%init('qwave'     , 'flow of a wave'                                , 'm2/s', ncd_double, [ixStateDims%seg,ixStateDims%wave,ixStateDims%ens], .true.)
- call meta_kwt(ixKWT%qwave_mod)%init('qwave_mod' , 'modified flow of a wave'                       , 'm2/s', ncd_double, [ixStateDims%seg,ixStateDims%wave,ixStateDims%ens], .true.)
- call meta_kwt(ixKWT%routed   )%init('routed'    , 'routing flag'                                  , '-'   , ncd_int,    [ixStateDims%seg,ixStateDims%wave,ixStateDims%ens], .true.)
- call meta_kwt(ixKWT%vol      )%init('volume_kwt', 'volume in reach/lake'                          , 'm3'  , ncd_double, [ixStateDims%seg,ixStateDims%ens],                  .true.)
+ call meta_kwt(ixKWT%tentry   )%init('tentry'    , 'time when a wave enters a segment'             , 's'   , ncd_double, [ixStateDims%seg,ixStateDims%wave], .true.)
+ call meta_kwt(ixKWT%texit    )%init('texit'     , 'time when a wave is expected to exit a segment', 's'   , ncd_double, [ixStateDims%seg,ixStateDims%wave], .true.)
+ call meta_kwt(ixKWT%qwave    )%init('qwave'     , 'flow of a wave'                                , 'm2/s', ncd_double, [ixStateDims%seg,ixStateDims%wave], .true.)
+ call meta_kwt(ixKWT%qwave_mod)%init('qwave_mod' , 'modified flow of a wave'                       , 'm2/s', ncd_double, [ixStateDims%seg,ixStateDims%wave], .true.)
+ call meta_kwt(ixKWT%routed   )%init('routed'    , 'routing flag'                                  , '-'   , ncd_int,    [ixStateDims%seg,ixStateDims%wave], .true.)
+ call meta_kwt(ixKWT%vol      )%init('volume_kwt', 'volume in reach/lake'                          , 'm3'  , ncd_double, [ixStateDims%seg],                  .true.)
 
  ! Kinematic Wave
- call meta_kw(ixKW%qsub)%init('q_sub_kw' , 'flow at computational moelcule', 'm3/s', ncd_double, [ixStateDims%seg,ixStateDims%mol_kw,ixStateDims%ens], .true.)
- call meta_kw(ixKW%vol )%init('volume_kw', 'volume in reach/lake',           'm3',   ncd_double, [ixStateDims%seg,ixStateDims%ens] , .true.)
+ call meta_kw(ixKW%qsub)%init('q_sub_kw' , 'flow at computational moelcule', 'm3/s', ncd_double, [ixStateDims%seg,ixStateDims%mol_kw], .true.)
+ call meta_kw(ixKW%vol )%init('volume_kw', 'volume in reach/lake',           'm3',   ncd_double, [ixStateDims%seg] , .true.)
 
  ! Diffusive Wave
- call meta_dw(ixDW%qsub)%init('q_sub_dw' , 'flow at computational moelcule', 'm3/s', ncd_double, [ixStateDims%seg,ixStateDims%mol_dw,ixStateDims%ens], .true.)
- call meta_dw(ixDW%vol )%init('volume_dw', 'volume in reach/lake',           'm3',   ncd_double, [ixStateDims%seg,ixStateDims%ens] , .true.)
+ call meta_dw(ixDW%qsub)%init('q_sub_dw' , 'flow at computational moelcule', 'm3/s', ncd_double, [ixStateDims%seg,ixStateDims%mol_dw], .true.)
+ call meta_dw(ixDW%vol )%init('volume_dw', 'volume in reach/lake',           'm3',   ncd_double, [ixStateDims%seg] , .true.)
 
  ! Muskingum-cunge
- call meta_mc(ixMC%qsub)%init('q_sub_mc' , 'flow at computational molecule', 'm3/s', ncd_double, [ixStateDims%seg,ixStateDims%mol_mc,ixStateDims%ens], .true.)
- call meta_mc(ixMC%vol )%init('volume_mc', 'volume in reach/lake',           'm3',   ncd_double, [ixStateDims%seg,ixStateDims%ens] , .true.)
+ call meta_mc(ixMC%qsub)%init('q_sub_mc' , 'flow at computational molecule', 'm3/s', ncd_double, [ixStateDims%seg,ixStateDims%mol_mc], .true.)
+ call meta_mc(ixMC%vol )%init('volume_mc', 'volume in reach/lake',           'm3',   ncd_double, [ixStateDims%seg] , .true.)
 
  ! Impulse Response Function
- call meta_irf(ixIRF%qfuture)%init('irf_qfuture', 'future flow series',   'm3/s' ,ncd_double, [ixStateDims%seg,ixStateDims%tdh_irf,ixStateDims%ens] , .true.)
- call meta_irf(ixIRF%vol    )%init('volume_irf' , 'volume in reach/lake', 'm3'   ,ncd_double, [ixStateDims%seg,ixStateDims%tbound, ixStateDims%ens] , .true.)
+ call meta_irf(ixIRF%qfuture)%init('irf_qfuture', 'future flow series',   'm3/s' ,ncd_double, [ixStateDims%seg,ixStateDims%tdh_irf] , .true.)
+ call meta_irf(ixIRF%vol    )%init('volume_irf' , 'volume in reach/lake', 'm3'   ,ncd_double, [ixStateDims%seg,ixStateDims%tbound] , .true.)
 
  ! Basin Impulse Response Function
- call meta_irf_bas(ixIRFbas%qfuture)%init('qfuture', 'future flow series', 'm3/s' ,ncd_double, [ixStateDims%seg,ixStateDims%tdh,ixStateDims%ens], .true.)
+ call meta_irf_bas(ixIRFbas%qfuture)%init('qfuture', 'future flow series', 'm3/s' ,ncd_double, [ixStateDims%seg,ixStateDims%tdh], .true.)
 
  ! reach inflow from basin
- call meta_basinQ(ixBasinQ%q)%init('basin_q', 'basin routed flow', 'm3/s' ,ncd_double, [ixStateDims%seg,ixStateDims%ens], .true.)
+ call meta_basinQ(ixBasinQ%q)%init('basin_q', 'basin routed flow', 'm3/s' ,ncd_double, [ixStateDims%seg], .true.)
 
  end subroutine popMetadat
 

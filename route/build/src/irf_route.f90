@@ -30,7 +30,6 @@ CONTAINS
  ! subroutine: perform one segment route UH routing
  ! *********************************************************************
  SUBROUTINE irf_rch(this,         & ! irf_route_rch object to bound this procedure
-                    iEns,         & ! input: index of runoff ensemble
                     segIndex,     & ! input: reach index
                     ixDesire,     & ! input: reachID to be checked by on-screen pringing
                     T0,T1,        & ! input: start and end of the time step
@@ -45,14 +44,13 @@ CONTAINS
  implicit none
  ! Argument variables
  class(irf_route_rch)                     :: this            ! irf_route_rch object to bound this procedure
- integer(i4b),  intent(in)                :: iEns            ! runoff ensemble to be routed
  integer(i4b),  intent(in)                :: segIndex        ! segment where routing is performed
  integer(i4b),  intent(in)                :: ixDesire        ! index of the reach for verbose output
  real(dp),      intent(in)                :: T0,T1           ! start and end of the time step (seconds)
  type(RCHTOPO), intent(in),   allocatable :: NETOPO_in(:)    ! River Network topology
  type(RCHPRP),  intent(inout),allocatable :: RPARAM_in(:)    ! River reach parameter
- type(STRSTA),  intent(inout)             :: RCHSTA_out(:,:) ! reach state data
- type(STRFLX),  intent(inout)             :: RCHFLX_out(:,:) ! Reach fluxes (ensembles, space [reaches]) for decomposed domains
+ type(STRSTA),  intent(inout)             :: RCHSTA_out(:)   ! reach state data
+ type(STRFLX),  intent(inout)             :: RCHFLX_out(:)   ! Reach fluxes (ensembles, space [reaches]) for decomposed domains
  integer(i4b),  intent(out)               :: ierr            ! error code
  character(*),  intent(out)               :: message         ! error message
  ! Local variables
@@ -76,11 +74,11 @@ CONTAINS
  end if
 
   ! initialize future discharge array at first time
-  if (.not.allocated(RCHFLX_out(iens,segIndex)%QFUTURE_IRF))then
+  if (.not.allocated(RCHFLX_out(segIndex)%QFUTURE_IRF))then
     ntdh = size(NETOPO_in(segIndex)%UH)
-    allocate(RCHFLX_out(iens,segIndex)%QFUTURE_IRF(ntdh), stat=ierr, errmsg=cmessage)
-    if(ierr/=0)then; message=trim(message)//trim(cmessage)//': RCHFLX_out(iens,segIndex)%QFUTURE_IRF'; return; endif
-    RCHFLX_out(iens,segIndex)%QFUTURE_IRF(:) = 0._dp
+    allocate(RCHFLX_out(segIndex)%QFUTURE_IRF(ntdh), stat=ierr, errmsg=cmessage)
+    if(ierr/=0)then; message=trim(message)//trim(cmessage)//': RCHFLX_out(segIndex)%QFUTURE_IRF'; return; endif
+    RCHFLX_out(segIndex)%QFUTURE_IRF(:) = 0._dp
   end if
 
   ! get discharge coming from upstream
@@ -89,16 +87,16 @@ CONTAINS
   if (nUps>0) then
     do iUps = 1,nUps
       iRch_ups = NETOPO_in(segIndex)%UREACHI(iUps)      !  index of upstream of segIndex-th reach
-      q_upstream = q_upstream + RCHFLX_out(iens, iRch_ups)%ROUTE(idxIRF)%REACH_Q
+      q_upstream = q_upstream + RCHFLX_out(iRch_ups)%ROUTE(idxIRF)%REACH_Q
     end do
   endif
 
-  RCHFLX_out(iens,segIndex)%ROUTE(idxIRF)%REACH_WM_FLUX_actual = RCHFLX_out(iens,segIndex)%REACH_WM_FLUX ! initialize actual water abstraction
+  RCHFLX_out(segIndex)%ROUTE(idxIRF)%REACH_WM_FLUX_actual = RCHFLX_out(segIndex)%REACH_WM_FLUX ! initialize actual water abstraction
 
   ! perform UH convolution
   call conv_upsbas_qr(NETOPO_in(segIndex)%UH,    &    ! input: reach unit hydrograph
                       q_upstream,                &    ! input: total discharge at top of the reach being processed
-                      RCHFLX_out(iens,segIndex), &    ! inout: updated fluxes at reach
+                      RCHFLX_out(segIndex), &    ! inout: updated fluxes at reach
                       ierr, message)                  ! output: error control
   if(ierr/=0)then; message=trim(message)//trim(cmessage); return; endif
 
@@ -106,33 +104,33 @@ CONTAINS
 !  ! here we should make sure the real missing is not injection (or negative abstration)
 !  abstract_actual = 0._dp ! this can be removed later (after extensive testing)
 !  init_STRQ = 0._dp ! this can be removed later (after extensive testing)
-!  if((RCHFLX_out(iens,segIndex)%REACH_WM_FLUX /= realMissing).and.(is_flux_wm)) then
-!    abstract_actual = RCHFLX_out(iens,segIndex)%REACH_Q ! get the reach streamflow as actual abstration
-!    init_STRQ = RCHFLX_out(iens,segIndex)%REACH_Q ! TO BE DELETED
+!  if((RCHFLX_out(segIndex)%REACH_WM_FLUX /= realMissing).and.(is_flux_wm)) then
+!    abstract_actual = RCHFLX_out(segIndex)%REACH_Q ! get the reach streamflow as actual abstration
+!    init_STRQ = RCHFLX_out(segIndex)%REACH_Q ! TO BE DELETED
 !    ! reach streamflow is updated based on abstration (positive) or injection (negative)
-!    RCHFLX_out(iens,segIndex)%REACH_Q = RCHFLX_out(iens,segIndex)%REACH_Q - RCHFLX_out(iens,segIndex)%REACH_WM_FLUX
-!    if (RCHFLX_out(iens,segIndex)%REACH_Q>0) then ! abstration was negative or smaller than reach streamflow
-!      abstract_actual  =  RCHFLX_out(iens,segIndex)%REACH_WM_FLUX ! actual abstration will be equal to abstration value
+!    RCHFLX_out(segIndex)%REACH_Q = RCHFLX_out(segIndex)%REACH_Q - RCHFLX_out(segIndex)%REACH_WM_FLUX
+!    if (RCHFLX_out(segIndex)%REACH_Q>0) then ! abstration was negative or smaller than reach streamflow
+!      abstract_actual  =  RCHFLX_out(segIndex)%REACH_WM_FLUX ! actual abstration will be equal to abstration value
 !    else
-!      RCHFLX_out(iens,segIndex)%REACH_Q = 0._dp ! all the water is taken and actual abstration is reach streamflow
+!      RCHFLX_out(segIndex)%REACH_Q = 0._dp ! all the water is taken and actual abstration is reach streamflow
 !    endif
 !  endif
-!  WB_check = RCHFLX_out(iens,segIndex)%REACH_Q + abstract_actual - init_STRQ
+!  WB_check = RCHFLX_out(segIndex)%REACH_Q + abstract_actual - init_STRQ
 
   ! take out the water from the reach if the wm flag is true and the value are not missing
   ! here we should make sure the real missing is not injection (or negative abstration)
-  if((RCHFLX_out(iens,segIndex)%REACH_WM_FLUX /= realMissing).and.(is_flux_wm)) then
-    if (RCHFLX_out(iens,segIndex)%REACH_WM_FLUX <= 0) then ! negative/injection
-      RCHFLX_out(iens,segIndex)%ROUTE(idxIRF)%REACH_Q = RCHFLX_out(iens,segIndex)%ROUTE(idxIRF)%REACH_Q - RCHFLX_out(iens,segIndex)%REACH_WM_FLUX
-      RCHFLX_out(iens,segIndex)%ROUTE(idxIRF)%REACH_WM_FLUX_actual = RCHFLX_out(iens,segIndex)%REACH_WM_FLUX
+  if((RCHFLX_out(segIndex)%REACH_WM_FLUX /= realMissing).and.(is_flux_wm)) then
+    if (RCHFLX_out(segIndex)%REACH_WM_FLUX <= 0) then ! negative/injection
+      RCHFLX_out(segIndex)%ROUTE(idxIRF)%REACH_Q = RCHFLX_out(segIndex)%ROUTE(idxIRF)%REACH_Q - RCHFLX_out(segIndex)%REACH_WM_FLUX
+      RCHFLX_out(segIndex)%ROUTE(idxIRF)%REACH_WM_FLUX_actual = RCHFLX_out(segIndex)%REACH_WM_FLUX
     else ! positive/abstraction
-      Qabs = min(RCHFLX_out(iens,segIndex)%ROUTE(idxIRF)%REACH_VOL(1)/dt+RCHFLX_out(iens,segIndex)%ROUTE(idxIRF)%REACH_Q, &
-                 RCHFLX_out(iens,segIndex)%REACH_WM_FLUX)
-      Vmod = min(RCHFLX_out(iens,segIndex)%ROUTE(idxIRF)%REACH_Q-Qabs, 0._dp) ! is taken from storage and is <= 0
+      Qabs = min(RCHFLX_out(segIndex)%ROUTE(idxIRF)%REACH_VOL(1)/dt+RCHFLX_out(segIndex)%ROUTE(idxIRF)%REACH_Q, &
+                 RCHFLX_out(segIndex)%REACH_WM_FLUX)
+      Vmod = min(RCHFLX_out(segIndex)%ROUTE(idxIRF)%REACH_Q-Qabs, 0._dp) ! is taken from storage and is <= 0
 
-      RCHFLX_out(iens,segIndex)%ROUTE(idxIRF)%REACH_VOL(1) = RCHFLX_out(iens,segIndex)%ROUTE(idxIRF)%REACH_VOL(1) + Vmod*dt
-      RCHFLX_out(iens,segIndex)%ROUTE(idxIRF)%REACH_Q      = RCHFLX_out(iens,segIndex)%ROUTE(idxIRF)%REACH_Q - (Qabs+Vmod)
-      RCHFLX_out(iens,segIndex)%ROUTE(idxIRF)%REACH_WM_FLUX_actual = Qabs
+      RCHFLX_out(segIndex)%ROUTE(idxIRF)%REACH_VOL(1) = RCHFLX_out(segIndex)%ROUTE(idxIRF)%REACH_VOL(1) + Vmod*dt
+      RCHFLX_out(segIndex)%ROUTE(idxIRF)%REACH_Q      = RCHFLX_out(segIndex)%ROUTE(idxIRF)%REACH_Q - (Qabs+Vmod)
+      RCHFLX_out(segIndex)%ROUTE(idxIRF)%REACH_WM_FLUX_actual = Qabs
     endif
   endif
 
@@ -145,22 +143,22 @@ CONTAINS
     write(*,'(a)')              ' * total discharge from upstream(q_upstream) [m3/s], local area discharge [m3/s]' // &
             ', and Final discharge [m3/s]:'
     write(*,'(a,1x,F15.7)')     ' q_upstream             =', q_upstream
-    write(*,'(a,1x,F15.7)')     ' RCHFLX_out%BASIN_QR(1) =', RCHFLX_out(iens,segIndex)%BASIN_QR(1)
-    write(*,'(a,1x,F15.7)')     ' RCHFLX_out%REACH_Q =', RCHFLX_out(iens,segIndex)%ROUTE(idxIRF)%REACH_Q
+    write(*,'(a,1x,F15.7)')     ' RCHFLX_out%BASIN_QR(1) =', RCHFLX_out(segIndex)%BASIN_QR(1)
+    write(*,'(a,1x,F15.7)')     ' RCHFLX_out%REACH_Q =', RCHFLX_out(segIndex)%ROUTE(idxIRF)%REACH_Q
   endif
 
-  if (RCHFLX_out(iens,segIndex)%ROUTE(idxIRF)%REACH_VOL(1) < 0) then
-    write(iulog,'(A,1X,G12.5,1X,A,1X,I9)') ' ---- NEGATIVE VOLUME [m3]= ', RCHFLX_out(iens,segIndex)%ROUTE(idxIRF)%REACH_VOL(1), &
+  if (RCHFLX_out(segIndex)%ROUTE(idxIRF)%REACH_VOL(1) < 0) then
+    write(iulog,'(A,1X,G12.5,1X,A,1X,I9)') ' ---- NEGATIVE VOLUME [m3]= ', RCHFLX_out(segIndex)%ROUTE(idxIRF)%REACH_VOL(1), &
           'at ', NETOPO_in(segIndex)%REACHID
-!    RCHFLX_out(iens,segIndex)%ROUTE(idxIRF)%REACH_VOL(1) = 0._dp
+!    RCHFLX_out(segIndex)%ROUTE(idxIRF)%REACH_VOL(1) = 0._dp
   end if
-  if (RCHFLX_out(iens,segIndex)%ROUTE(idxIRF)%REACH_Q < 0) then
-    write(iulog,'(A,1X,G12.5,1X,A,1X,I9)') ' ---- NEGATIVE FLOW [m3/s] = ', RCHFLX_out(iens,segIndex)%ROUTE(idxIRF)%REACH_Q, &
+  if (RCHFLX_out(segIndex)%ROUTE(idxIRF)%REACH_Q < 0) then
+    write(iulog,'(A,1X,G12.5,1X,A,1X,I9)') ' ---- NEGATIVE FLOW [m3/s] = ', RCHFLX_out(segIndex)%ROUTE(idxIRF)%REACH_Q, &
            'at ', NETOPO_in(segIndex)%REACHID
-!    RCHFLX_out(iens,segIndex)%ROUTE(idxIRF)%REACH_Q = 0._dp
+!    RCHFLX_out(segIndex)%ROUTE(idxIRF)%REACH_Q = 0._dp
   end if
 
-  call comp_reach_wb(NETOPO_in(segIndex)%REACHID, idxIRF, q_upstream, RCHFLX_out(iens,segIndex), verbose, lakeFlag=.false.)
+  call comp_reach_wb(NETOPO_in(segIndex)%REACHID, idxIRF, q_upstream, RCHFLX_out(segIndex), verbose, lakeFlag=.false.)
 
  END SUBROUTINE irf_rch
 

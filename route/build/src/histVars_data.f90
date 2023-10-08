@@ -29,7 +29,7 @@ MODULE histVars_data
   USE globalData,        ONLY: pio_typename
   USE globalData,        ONLY: pioSystem
   USE globalData,        ONLY: ioDesc_hru_double
-  USE globalData,        ONLY: ioDesc_hist_rch_double
+  USE globalData,        ONLY: ioDesc_rch_double
   USE nr_utils,          ONLY: arth
   USE ncio_utils,        ONLY: get_nc
   USE pio_utils,         ONLY: file_desc_t
@@ -139,7 +139,7 @@ MODULE histVars_data
       class(histVars),   intent(inout)   :: this
       real(dp),          intent(in)      :: timeVar_local(2)    ! time variables [time unit] at endpoints of current simulation step
       real(dp),          intent(in)      :: basRunoff_local(:)  ! HRU average runoff depth [m/s]
-      type(STRFLX),      intent(in)      :: RCHFLX_local(:,:)   ! Reach flux data structure
+      type(STRFLX),      intent(in)      :: RCHFLX_local(:)     ! Reach flux data structure
       integer(i4b),      intent(out)     :: ierr                ! error code
       character(*),      intent(out)     :: message             ! error message
       ! local variables
@@ -163,7 +163,7 @@ MODULE histVars_data
       ! -- array size checks - input data vs history output buffer
       ! hru and reach size in input data
       nHru_input = size(basRunoff_local)
-      nRch_input = size(RCHFLX_local(1,:))
+      nRch_input = size(RCHFLX_local)
       if (nHru_input/=this%nHru) then
         write(message,'(2A,G0,A,G0)') trim(message),'history buffer hru size:',this%nHru,'/= input data hru size:',nHru_input
         ierr=81; return
@@ -181,12 +181,12 @@ MODULE histVars_data
 
       ! 2. instantaneous runoff into reach
       if (meta_rflx(ixRFLX%instRunoff)%varFile) then
-        this%instRunoff(1:this%nRch) = this%instRunoff(1:this%nRch) + RCHFLX_local(1,1:this%nRch)%BASIN_QI
+        this%instRunoff(1:this%nRch) = this%instRunoff(1:this%nRch) + RCHFLX_local(1:this%nRch)%BASIN_QI
       end if
 
       ! 3. delayed runoff into reach
       if (meta_rflx(ixRFLX%dlayRunoff)%varFile) then
-        this%dlayRunoff(1:this%nRch) = this%dlayRunoff(1:this%nRch) + RCHFLX_local(1,1:this%nRch)%BASIN_QR(1)
+        this%dlayRunoff(1:this%nRch) = this%dlayRunoff(1:this%nRch) + RCHFLX_local(1:this%nRch)%BASIN_QR(1)
       end if
 
       ! 4. discharge and volume
@@ -204,8 +204,8 @@ MODULE histVars_data
         end select
 
         do ix=1,this%nRch
-          this%discharge(ix,iRoute) = this%discharge(ix,iRoute) + RCHFLX_local(1,ix)%ROUTE(idxMethod)%REACH_Q
-          this%volume(ix,iRoute)    = this%volume(ix,iRoute) + RCHFLX_local(1,ix)%ROUTE(idxMethod)%REACH_VOL(1)
+          this%discharge(ix,iRoute) = this%discharge(ix,iRoute) + RCHFLX_local(ix)%ROUTE(idxMethod)%REACH_Q
+          this%volume(ix,iRoute)    = this%volume(ix,iRoute) + RCHFLX_local(ix)%ROUTE(idxMethod)%REACH_VOL(1)
         end do
       end do
 
@@ -336,7 +336,7 @@ MODULE histVars_data
         allocate(this%instRunoff(this%nRch), stat=ierr, errmsg=cmessage)
         if(ierr/=0)then; message=trim(message)//trim(cmessage)//' [hVars%instRunoff]'; return; endif
 
-        call read_dist_array(pioFileDesc, meta_rflx(ixRFLX%instRunoff)%varName, array_tmp, ioDesc_hist_rch_double, ierr, cmessage)
+        call read_dist_array(pioFileDesc, meta_rflx(ixRFLX%instRunoff)%varName, array_tmp, ioDesc_rch_double, ierr, cmessage)
         if(ierr/=0)then; message=trim(message)//trim(cmessage); return; endif
 
         ! need to shift tributary part in main core to after halo reaches (nTribOutlet)
@@ -353,7 +353,7 @@ MODULE histVars_data
         allocate(this%dlayRunoff(this%nRch), stat=ierr, errmsg=cmessage)
         if(ierr/=0)then; message=trim(message)//trim(cmessage)//' [hVars%dlayRunoff]'; return; endif
 
-        call read_dist_array(pioFileDesc, meta_rflx(ixRFLX%dlayRunoff)%varName, array_tmp, ioDesc_hist_rch_double, ierr, cmessage)
+        call read_dist_array(pioFileDesc, meta_rflx(ixRFLX%dlayRunoff)%varName, array_tmp, ioDesc_rch_double, ierr, cmessage)
         if(ierr/=0)then; message=trim(message)//trim(cmessage); return; endif
 
         ! need to shift tributary part in main core to after halo reaches (nTribOutlet)
@@ -400,7 +400,7 @@ MODULE histVars_data
           end select
 
           if (meta_rflx(ixFlow)%varFile) then
-            call read_dist_array(pioFileDesc, meta_rflx(ixFlow)%varName, array_tmp, ioDesc_hist_rch_double, ierr, cmessage)
+            call read_dist_array(pioFileDesc, meta_rflx(ixFlow)%varName, array_tmp, ioDesc_rch_double, ierr, cmessage)
             if(ierr/=0)then; message=trim(message)//trim(cmessage); return; endif
             ! need to shift tributary part in main core to after halo reaches (nTribOutlet)
             if (masterproc) then
@@ -414,7 +414,7 @@ MODULE histVars_data
           if (routeMethods(ixRoute)==accumRunoff) cycle  ! accumuRunoff has only discharge
 
           if (meta_rflx(ixVol)%varFile) then
-            call read_dist_array(pioFileDesc, meta_rflx(ixVol)%varName, array_tmp, ioDesc_hist_rch_double, ierr, cmessage)
+            call read_dist_array(pioFileDesc, meta_rflx(ixVol)%varName, array_tmp, ioDesc_rch_double, ierr, cmessage)
             if(ierr/=0)then; message=trim(message)//trim(cmessage); return; endif
             ! need to shift tributary part in main core to after halo reaches (nTribOutlet)
             if (masterproc) then
