@@ -14,7 +14,7 @@ USE public_var,    ONLY: desireId        ! ID or reach where detailed reach stat
 USE public_var,    ONLY: dt              ! simulation time step [sec]
 USE public_var,    ONLY: is_flux_wm      ! logical water management components fluxes should be read
 USE public_var,    ONLY: qmodOption      ! qmod option (use 1==direct insertion)
-USE public_var,    ONLY: hw_drain_point  ! headwater catchment pour point (top_reach==1 or bottom_reach==2)
+USE public_var,    ONLY: hw_drain_point  ! headwater catchment pour point (top_reach==1 bottom_reach==2, along_reach=3)
 USE public_var,    ONLY: min_length_route! minimum reach length for routing to be performed.
 USE public_var,    ONLY: negVolTol       ! negative channel water volume tolerance [m3]
 USE globalData,    ONLY: idxDW           ! routing method index for diffusive wave
@@ -33,7 +33,7 @@ public::dfw_route_rch
 
 integer(i4b), parameter :: top_reach=1
 integer(i4b), parameter :: bottom_reach=2
-integer(i4b), parameter :: advec_scheme=2 ! 1->upwind, 2->central difference
+integer(i4b), parameter :: advec_scheme=2 !  1->upwind, 2->central difference
 integer(i4b), parameter :: downBC = 2 ! downstream end B.C: 1->open (absorbing) B.C., 2->Neumann B.C.
 
 type, extends(base_route_rch) :: dfw_route_rch
@@ -247,6 +247,7 @@ CONTAINS
  real(dp)                        :: qoutTmp        ! temporary scalar for discharge from reach
  real(dp)                        :: volTmp         ! temporary scalar for reach volume
  real(dp)                        :: pcntReduc      ! flow profile adjustment based on storage [-]
+ real(dp)                        :: Qlat_tmp=0       ! lateral flow [m3/s]
  integer(i4b)                    :: it             ! loop index
  integer(i4b)                    :: ntSub          ! number of sub time-step
  character(len=strLen)           :: cmessage       ! error message from subroutine
@@ -308,8 +309,8 @@ CONTAINS
                     Qprev,              & ! input: quantity at previous time step [unit of quantity]
                     Qlocal,             & ! inout: quantity soloved at current time step [unit of quantity]
                     verbose,            & ! input: reach index to be examined
-                    advec_scheme=advec_scheme, & ! optional input: advection scheme (1->central difference, 2->upwind)
-                    downstreamBC=downBC)         ! optional input: downstream boundary condition (1->Neumann, 2->open boundary condition)
+                    advec_scheme=advec_scheme, & ! optional input: advection scheme (1->upwind, 2->central difference)
+                    downstreamBC=downBC)         ! optional input: downstream boundary condition (1->open boundary condition, 2->Neumann)
    end do
 
    ! For very low flow condition, outflow - inflow may exceed current storage, so limit outflow and adjust flow profile
@@ -320,7 +321,8 @@ CONTAINS
      Qlocal(2:nMolecule,1) = Qlocal(2:nMolecule,1)*pcntReduc
    end if
 
-   rflux%ROUTE(idxDW)%REACH_VOL(1) = rflux%ROUTE(idxDW)%REACH_VOL(1) + (Qupstream - Qlocal(nMolecule-1,1))*dt
+!   rflux%ROUTE(idxDW)%REACH_VOL(1) = rflux%ROUTE(idxDW)%REACH_VOL(1) + (Qupstream - Qlocal(nMolecule-1,1))*dt
+   rflux%ROUTE(idxDW)%REACH_VOL(1) = rflux%ROUTE(idxDW)%REACH_VOL(1) + (Qupstream + Qlat - Qlocal(nMolecule-1,1))*dt
 
    ! if reach volume exceeds flood threshold volume, excess water is flooded volume.
    if (rflux%ROUTE(idxDW)%REACH_VOL(1) > bankVol) then
@@ -332,7 +334,8 @@ CONTAINS
    rflux%ROUTE(idxDW)%REACH_ELE = water_height(rflux%ROUTE(idxDW)%REACH_VOL(1)/L, bt, zc, zf=zf, bankDepth=bankDepth)
 
    ! store final outflow in data structure
-   rflux%ROUTE(idxDW)%REACH_Q = Qlocal(nMolecule-1,1) + Qlat
+!   rflux%ROUTE(idxDW)%REACH_Q = Qlocal(nMolecule-1,1) + Qlat
+   rflux%ROUTE(idxDW)%REACH_Q = Qlocal(nMolecule-1,1)
 
    ! update state
    rstate%molecule%Q = Qlocal(:,1)
@@ -358,10 +361,6 @@ CONTAINS
 
    rstate%molecule%Q(1:nMolecule) = 0._dp
    rstate%molecule%Q(nMolecule)   = rflux%ROUTE(idxDW)%REACH_Q
-
-   if (verbose) then
-     write(iulog,'(A)')            ' This is headwater '
-   endif
 
  endif
 

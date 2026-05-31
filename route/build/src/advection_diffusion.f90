@@ -19,21 +19,21 @@ CONTAINS
   SUBROUTINE solve_ade(reach_length,  & ! input: Reach length [m]
                        nMolecule,     & ! input: number of sub-segments
                        dt_local,      & ! input: time_step [sec]
-                       FluxUpstream,  & ! input: Flux (e.g., dischage, concentration) from upstream [unit of quantity]
+                       FluxUpstream,  & ! input: Flux (e.g., dischage, concentration) from upstream [unit of quantity per seoncd]
                        ck,            & ! input: velocity [m/s]
                        dk,            & ! input: diffusivity [m2/s]
-                       FluxLat,       & ! input: lateral flux into chaneel [unit of quantity]
-                       FluxPrev,      & ! input: Flux at previous time step [unit of quantity]
-                       FluxLocal,     & ! inout: Flux soloved at current time step [unit of quantity]
+                       FluxLat,       & ! input: lateral flux into chaneel [unit of quantity per second]
+                       FluxPrev,      & ! input: Flux at previous time step [unit of quantity per second]
+                       FluxLocal,     & ! inout: Flux soloved at current time step [unit of quantity per second]
                        verbose,       & ! input: reach index to be examined
-                       advec_scheme,  & ! optional input: advection term descretization: 1->central difference, 2->upwind method
-                       downstreamBC,  & ! optional input: downstream end B.C. 1->Neumann, 2->absorbing
+                       advec_scheme,  & ! optional input: advection term descretization: 1->upwind, 2->central difference
+                       downstreamBC,  & ! optional input: downstream end B.C. 1->absorbing, 2->Neumann
                        wc,            & ! optional input: advection term descretization weight: 0=fully explict to 1=fully implicit
                        wd             & ! optional input: diffusion term descretization weight: 1=fully explict to 2=fully implicit
                        )
   ! ----------------------------------------------------------------------------------------
   ! Solve linearlized advection diffusive equation per reach and time step.
-  !  dQ/dt + ck*dQ/dx = dk*d2Q/dx2 + FluxLat - a)
+  !  dQ/dt + ck*dQ/dx = dk*d2Q/dx2 + ck*FluxLat - a)
   !
   !  ck (velocity) and dk (diffusivity) are given by input argument
   !
@@ -72,11 +72,12 @@ CONTAINS
   real(dp),     intent(in)      :: FluxPrev(nMolecule)       ! sub-reach quantity at previous time step [m3/s]
   real(dp),     intent(out)     :: FluxLocal(nMolecule,0:1)  ! sub-reach & sub-time step quantity at previous and current time step [m3/s]
   logical(lgt), intent(in)      :: verbose                   ! reach index to be examined
-  integer(i4b), optional, intent(in) :: advec_scheme         ! advection term descretization: 1->central diff.(default), 2->upwind method
-  integer(i4b), optional, intent(in) :: downstreamBC         ! downstream end B.C. 1->Neumann (default), 2->absorbing
+  integer(i4b), optional, intent(in) :: advec_scheme         ! advection term descretization: 2->central diff.(default), 1->upwind method
+  integer(i4b), optional, intent(in) :: downstreamBC         ! downstream end B.C. 2->Neumann (default), 1->absorbing
   real(dp), optional, intent(in) :: wc                       ! advection term weight
   real(dp), optional, intent(in) :: wd                       ! diffusion term weight
   ! Local variables
+  real(dp)                      :: FluxLat_per_length        ! lateral flow per unit reach length [m3/s/m]
   real(dp)                      :: Cd                        ! Fourier number
   real(dp)                      :: Ca                        ! Courant number
   real(dp)                      :: dx                        ! length of segment [m]
@@ -118,6 +119,10 @@ CONTAINS
 
   ! Get the reach parameters
   dx = reach_length/(Nx-1) ! one extra sub-segment beyond outlet
+
+  ! lateral flux per unit-length
+  FluxLat_per_length = 0._dp
+  if (FluxLat>0._dp) FluxLat_per_length = FluxLat/reach_length
 
   if (verbose) then
     write(iulog,'(A,1X,G12.5)') ' length [m]     =',reach_length
@@ -182,11 +187,13 @@ CONTAINS
   if (advec_discretization==upwind) then
     b(2:nMolecule-1) = ((1._dp-wck)*Ca +(1._dp-wdk)*Cd)*FluxLocal(1:nMolecule-2,0)  &
                      + (1._dp-(1._dp-wck)*Ca-2._dp*(1._dp-wdk)*Cd)*FluxLocal(2:nMolecule-1,0) &
-                     + (1._dp-wdk)*Cd*FluxLocal(3:nMolecule,0)
+                     + (1._dp-wdk)*Cd*FluxLocal(3:nMolecule,0) &
+                     + Ca* dx* FluxLat_per_length
   else if (advec_discretization==central) then
     b(2:nMolecule-1) = ((1._dp-wck)*Ca +2._dp*(1._dp-wdk)*Cd)*FluxLocal(1:nMolecule-2,0)  &
                       + (2._dp-4._dp*(1._dp-wdk)*Cd)*FluxLocal(2:nMolecule-1,0)           &
-                      - ((1._dp-wck)*Ca -2._dp*(1._dp-wdk)*Cd)*FluxLocal(3:nMolecule,0)
+                      - ((1._dp-wck)*Ca -2._dp*(1._dp-wdk)*Cd)*FluxLocal(3:nMolecule,0)   &
+                      + 2._dp* Ca* dx* FluxLat_per_length
   end if
 
   ! solve matrix equation - get updated FluxLocal
