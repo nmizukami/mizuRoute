@@ -317,7 +317,7 @@ CONTAINS
    if (abs(Qlocal(nMolecule-1,1))>0._dp) then
      volTmp = max(0._dp, rflux%ROUTE(idxDW)%REACH_VOL(1))
      qoutTmp = Qlocal(nMolecule-1,1)*dt
-     pcntReduc = min((volTmp + dt*Qupstream)*0.999_dp/qoutTmp, 1._dp)
+     pcntReduc = min((volTmp + dt*(Qupstream+Qlat))*0.999_dp/qoutTmp, 1._dp)
      Qlocal(2:nMolecule,1) = Qlocal(2:nMolecule,1)*pcntReduc
    end if
 
