@@ -77,7 +77,7 @@ CONTAINS
   real(dp), optional, intent(in) :: wc                       ! advection term weight
   real(dp), optional, intent(in) :: wd                       ! diffusion term weight
   ! Local variables
-  real(dp)                      :: FluxLat_per_length        ! lateral flow per unit reach length [m3/s/m]
+  real(dp)                      :: FluxLat_per_node          ! lateral flow at internal node  [m3/s/m]
   real(dp)                      :: Cd                        ! Fourier number
   real(dp)                      :: Ca                        ! Courant number
   real(dp)                      :: dx                        ! length of segment [m]
@@ -121,8 +121,8 @@ CONTAINS
   dx = reach_length/(Nx-1) ! one extra sub-segment beyond outlet
 
   ! lateral flux per unit-length
-  FluxLat_per_length = 0._dp
-  if (FluxLat>0._dp) FluxLat_per_length = FluxLat/reach_length
+  FluxLat_per_node = 0._dp
+  if (FluxLat>0._dp) FluxLat_per_node = FluxLat/real(Nx-1, dp)
 
   if (verbose) then
     write(iulog,'(A,1X,G12.5)') ' length [m]     =',reach_length
@@ -188,12 +188,12 @@ CONTAINS
     b(2:nMolecule-1) = ((1._dp-wck)*Ca +(1._dp-wdk)*Cd)*FluxLocal(1:nMolecule-2,0)  &
                      + (1._dp-(1._dp-wck)*Ca-2._dp*(1._dp-wdk)*Cd)*FluxLocal(2:nMolecule-1,0) &
                      + (1._dp-wdk)*Cd*FluxLocal(3:nMolecule,0) &
-                     + Ca* dx* FluxLat_per_length
+                     + Ca* FluxLat_per_node
   else if (advec_discretization==central) then
     b(2:nMolecule-1) = ((1._dp-wck)*Ca +2._dp*(1._dp-wdk)*Cd)*FluxLocal(1:nMolecule-2,0)  &
                       + (2._dp-4._dp*(1._dp-wdk)*Cd)*FluxLocal(2:nMolecule-1,0)           &
                       - ((1._dp-wck)*Ca -2._dp*(1._dp-wdk)*Cd)*FluxLocal(3:nMolecule,0)   &
-                      + 2._dp* Ca* dx* FluxLat_per_length
+                      + 2._dp* Ca* FluxLat_per_node
   end if
 
   ! solve matrix equation - get updated FluxLocal

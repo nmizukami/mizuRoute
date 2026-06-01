@@ -30,8 +30,8 @@ implicit none
 private
 public::dfw_route_rch
 
-integer(i4b), parameter :: advec_scheme=2 !  1->upwind, 2->central difference
-integer(i4b), parameter :: downBC = 2 ! downstream end B.C: 1->open (absorbing) B.C., 2->Neumann B.C.
+integer(i4b), parameter :: advec_scheme=1 !  1->upwind, 2->central difference
+integer(i4b), parameter :: downBC = 1 ! downstream end B.C: 1->open (absorbing) B.C., 2->Neumann B.C.
 
 type, extends(base_route_rch) :: dfw_route_rch
  CONTAINS
