@@ -21,6 +21,7 @@ USE water_balance, ONLY: comp_reach_wb   ! compute water balance error
 USE base_route,    ONLY: base_route_rch  ! base (abstract) reach routing method class
 USE hydraulic,     ONLY: flow_depth
 USE hydraulic,     ONLY: water_height
+USE hydraulic,     ONLY: uniformFlow
 USE hydraulic,     ONLY: celerity
 USE hydraulic,     ONLY: diffusivity
 USE data_assimilation, ONLY: direct_insertion ! qmod option (use 1==direct insertion)
@@ -225,6 +226,7 @@ CONTAINS
  real(dp)                        :: Qbar_prev      ! previous average discharge [m3/s]
  real(dp)                        :: Qbar_lat       ! current mean discharge [m3/s]
  real(dp)                        :: depth          ! flow depth [m]
+ real(dp)                        :: dx,Cd          !
  real(dp)                        :: ck             ! kinematic wave celerity [m/s]
  real(dp)                        :: dk             ! diffusivity [m2/s]
  real(dp), allocatable           :: Qlocal(:,:)    ! sub-reach & sub-time step discharge at previous and current time step [m3/s]
@@ -237,6 +239,7 @@ CONTAINS
  integer(i4b)                    :: ntSub          ! number of sub time-step
  character(len=strLen)           :: cmessage       ! error message from subroutine
  real(dp), parameter             :: Qmin = 1.0e-8_dp ! minimum flow to compute celerity and diffusivity
+ real(dp), parameter             :: Cd_max = 2.0     ! maximum diffusion number
 
  ierr=0; message='diffusive_wave/'
 
@@ -284,6 +287,11 @@ CONTAINS
      depth = flow_depth(abs(Qbar), bt, zc, S, n, zf=zf, bankDepth=bankDepth) ! compute flow depth as normal depth (a function of flow)
      ck    = celerity(abs(Qbar), depth, bt, zc, S, n, zf=zf, bankDepth=bankDepth)
      dk    = diffusivity(abs(Qbar), depth, bt, zc, S, n, zf=zf, bankDepth=bankDepth)
+
+     dx = L/(nMolecule-2) ! one extra sub-segment beyond outlet
+     Cd = dk * dTsub /(dx*dx)
+     Cd = min(Cd, Cd_max)
+     dk = Cd*dx*dx/dTsub
 
      call solve_ade(L,                  & ! input: river parameter data structure
                     nMolecule,          & ! input: number of sub-segments
