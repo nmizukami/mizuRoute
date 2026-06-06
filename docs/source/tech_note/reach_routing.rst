@@ -94,6 +94,7 @@ where *Q* is a discharge [m\ :sup:`3`\/s] at time t and a point of reach x,
 *h* is flow height [m],
 :math:`S_{0}` is a slope of reach [m/m],
 :math:`S_{f}` is a friction slope [m/m].
+:math:`q_{lat}` is lateral inflow from a local catchment per unit reach length[m\ :sup:`3`\/s/m].
 LHS of :eq:`0.2` consists of advection, inertia, and pressure gradient from the 1st to 3rd terms, while force temrs of RHS of :eq:`0.2` consists of gravity and frictional force from a river bed.
 
 The frictional slope is written as:
@@ -128,6 +129,7 @@ If advection and inertia terms are neglected (i.e., the 1st and 2nd terms in LHS
    D = \frac{K^2}{2QB}
 
 where *C* (Eq. :eq:`0.6`) is a wave celerity [m/s] and *D* (Eq. :eq:`0.7`) is a diffusivity [m\ :sup:`2`\/s]. *B* is a top width of flow cross-sectional area [m].
+For a complete derivation of diffusive wave equation (Eq. :eq:`0.5`) from Eqs :eq:`0.1` and :eq:`0.2`), please see :ref:`diffusive-wave_equation_derivation`
 
 If *D* is set to zero (i.e., diffusion is neglected), Eq. :eq:`0.5` becomes kinematic wave equation.
 The other way to derive kinematic wave equation is to neglect pressure gradient term in addition to advection and inertia and pressure gradient terms (i.e., all the terms in LHS of Eq. :eq:`0.2`).

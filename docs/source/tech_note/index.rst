@@ -1,7 +1,7 @@
 .. _tech_note:
 
 ########################
-mizuRoute Technical Note 
+mizuRoute Technical Note
 ########################
 
 .. toctree::
@@ -10,3 +10,5 @@ mizuRoute Technical Note
    Intro.rst
    reach_routing.rst
    lake_routing.rst
+   navigate_river_network.rst
+   diffusive_wave_derivation.rst

@@ -27,3 +27,10 @@ Geoscientific Model Development, 9(6), 2223–2238.
 https://doi.org/10.5194/gmd-9-2223-2016
 
 
+.. _Mizukami2021:
+
+Mizukami, N., Clark, M. P., Gharari, G., Kluzek, K.,, Pan, M., Lin, P., Beck, H. E., and  Yamazaki, D. (2021)
+A Vector-Based River Routing Model for Earth System Models: Parallelization and Global Applications.
+Journal of Advances in Modeling Earth Systems, 13(6), e2020MS002434
+https://doi.org/10.1029/2020MS002434
+
