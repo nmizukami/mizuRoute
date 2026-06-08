@@ -8,7 +8,7 @@ The wave tracking algorithm employed in this routing model was originally develo
 When Martyn Clark transitioned from NIWA to NCAR in 2010, and embarked on developing a new hydrologic model, SUMMA, the need for a river routing model became apparent.
 
 Subsequently the wave tracking subroutine in the TopNet model was extracted and underwent refactoring, ultimately enabling it to run over the Continental US with USGS catchment-river Geospatial Fabric data.
-During that time period, US hydrology projection studies (e.g. CMIP3 and CMIP5 hydrology projection), which were our focal point of our research, were utilizing the Lohmann’s Impulse Response Function (IRF) routing (Lohmann et al., 1996) to produce streamflow projections at selected gauges throughout the Continental US.
+During that time period, US hydrology projection studies (e.g. CMIP3 and CMIP5 hydrology projection), which were our focal point of our research, were utilizing the Lohmann’s Impulse Response Function (IRF) routing (:ref:`Lohmann et al., 1996 <Lohmann1996>`) to produce streamflow projections at selected gauges throughout the Continental US.
 
 This prompted us to implement the same Lohman’s routing scheme, allowing us to emulate both Lohman’s routing and Goring’s wave tracking routing.
 Although the routing code was capable of running using USGS Geospatial Fabric over multi-decades, it was slow using a single core. Consequently, we opted to document the routing development work as a publication in the Geoscientific Model Development (GMD) journal.
@@ -18,10 +18,10 @@ As It turns out, “mizu” translates to “water” in Japanese, and the sugge
 Somewhat importantly, It is not an acronym (which can be challenging to recall in its entirety) and is concise enough to remember.
 
 Since then, mizuRoute has undergone several rounds of refactoring to enhance both efficiency and usability.
-Initially, the river network connectivity computation was improved through a traditional pair coding exercise conducted over one weekend by Martyn and me, and subsequently, a hybrid parallelization implementation was introduced.
+Initially, in Feburary 2018, the river network connectivity computation was improved through a traditional pair coding exercise conducted over one weekend by Martyn and me. Subsequently,in 2018-2019, a hybrid parallelization implementation was introduced.
 This enhancement has empowered us to produce an ensemble of projected flows at numerous critical gauge locations, apply it to the global river network, then couple it to Earth System Model (i.e., Community Earth System Model).
 
-At the same time, lakes are added in river-only network, and new capability of simulating lake water balance was added by Shervan Gharari (University of Saskatchewan), and Inne vanderkelen at VUB worked with Shervan to implement paramertric reservoir release models.
+After that, in 2020 through 2022, lakes were added in river-only network, and new capability of simulating lake water balance was added by Shervan Gharari (University of Saskatchewan), and Inne vanderkelen at VUB worked with Shervan to implement paramertric reservoir release models.
 
 
 **References**
@@ -38,3 +38,12 @@ https://doi.org/10.1016/j.advwatres.2008.06.005
 Goring, D. G. (1994)
 Kinematic shocks and monoclinal waves in the Waimakariri, a steep, braided, gravel-bed river,
 Proceedings of the International Symposium on waves: Physical and numerical modelling, University of British Columbia, Vancouver, Canada, 336–345.
+
+.. _Lohmann1996:
+
+Lohmann, D., Nolte-Holube, R. and Raschke, E (1996)
+A large-scale horizontal routing model to be coupled to land surface parametrization schemes,
+Tellus A, 48: 708-721
+https://doi.org/10.1034/j.1600-0870.1996.t01-3-00009.x
+
+Last updated on June 7th, 2026
