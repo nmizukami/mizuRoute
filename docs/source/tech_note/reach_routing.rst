@@ -180,7 +180,7 @@ The resulting discretized diffusive wave equation becomes:
    :label: 5.5
 
    \frac{Q_{j}^{t+1} - Q_{j}^{t}}{\Delta t} + \frac{C}{2 \Delta x} \cdot ((1- \alpha )(Q_{j+1}^{t} - Q_{j-1}^{t})+ \alpha (Q_{j+1}^{t+1} - Q_{j-1}^{t+1})) = \\\\
-   D \cdot (\frac{(1- \beta)(Q_{j+1}^{t} - 2Q_{j}^{t} + Q_{j-1}^{t})}{(\Delta x)^2} + \frac{\beta (Q_{j+1}^{t+1} - 2Q_{j}^{t+1} +Q_{j-1}^{t+1})}{(\Delta x)^2})
+   D \cdot (\frac{(1- \beta)(Q_{j+1}^{t} - 2Q_{j}^{t} + Q_{j-1}^{t})}{(\Delta x)^2} + \frac{\beta (Q_{j+1}^{t+1} - 2Q_{j}^{t+1} +Q_{j-1}^{t+1})}{(\Delta x)^2}) + C \cdot q_{l}^{t}
 
 Rearranging Eq. :eq:`5.5` to:
 
@@ -191,6 +191,7 @@ Rearranging Eq. :eq:`5.5` to:
    -[(1- \alpha )C_{d} - 2(1- \beta )C_{d})] \cdot Q_{j+1}^{t} \\\\
    + [2-4(1- \beta )C_{d}] \cdot Q_{j}^{t} \\\\
    + [(1- \alpha )C_{a} + 2(1- \beta )C_{d})] \cdot Q_{j-1}^{t} \\\\
+   + 2\Delta t \cdot C \cdot q_{l}^{t} \\\\
 
    C_{a} = \frac{C \Delta t}{ \Delta x}, C_{d} = \frac{D \Delta t}{( \Delta x)^{2}}
 
@@ -243,24 +244,70 @@ For example, with 4 internal nodes as shown in, the matrix form of the equations
    \small b=
    \left[ \begin {array}{c}
    Q_{1}^{t+1} \cr
-   ((1-\alpha)C_{a} + 2(1-\beta)C_{d}) \cdot Q_{1}^{t} + (2-4(1-\beta)C_{d}) \cdot Q_{2}^{t} - ((1-\alpha)C_{a}-2(1-\beta)C_{d}) \cdot Q_{3}^{t} \cr
-   ((1-\alpha)C_{a} + 2(1-\beta)C_{d}) \cdot Q_{2}^{t} + (2-4(1-\beta)C_{d}) \cdot Q_{3}^{t} - ((1-\alpha)C_{a}-2(1-\beta)C_{d}) \cdot Q_{4}^{t} \cr
-   ((1-\alpha)C_{a} + 2(1-\beta)C_{d}) \cdot Q_{3}^{t} + (2-4(1-\beta)C_{d}) \cdot Q_{4}^{t} - ((1-\alpha)C_{a}-2(1-\beta)C_{d}) \cdot Q_{5}^{t} \cr
+   ((1-\alpha)C_{a} + 2(1-\beta)C_{d}) \cdot Q_{1}^{t} + (2-4(1-\beta)C_{d}) \cdot Q_{2}^{t} - ((1-\alpha)C_{a}-2(1-\beta)C_{d}) \cdot Q_{3}^{t} + 2\Delta \cdot C \cdot q_{l}^{t} \cr
+   ((1-\alpha)C_{a} + 2(1-\beta)C_{d}) \cdot Q_{2}^{t} + (2-4(1-\beta)C_{d}) \cdot Q_{3}^{t} - ((1-\alpha)C_{a}-2(1-\beta)C_{d}) \cdot Q_{4}^{t} + 2\Delta \cdot C \cdot q_{l}^{t} \cr
+   ((1-\alpha)C_{a} + 2(1-\beta)C_{d}) \cdot Q_{3}^{t} + (2-4(1-\beta)C_{d}) \cdot Q_{4}^{t} - ((1-\alpha)C_{a}-2(1-\beta)C_{d}) \cdot Q_{5}^{t} + 2\Delta \cdot C \cdot q_{l}^{t} \cr
    a \cdot dx
    \end {array} \right]
 
 
 The top row of the system of equations is upstream boundary conditions, which is inflow from upstream reaches (i.e., Dirichlet boundary condition).
-The Bottom row of the system of equations is downstream boundary condition.
-Here, Neumann boundary condition, which specifies the gradient of discharge between two adjacent nodes at the downstream end, is used.
-Neumann boundary condition at the downstream end is written by:
+The Bottom row of the system of equations is downstream boundary condition. Either Neumann boundary condition or open boundary condition is used
+Neumann boundary condition, which specifies the gradient of discharge between two adjacent nodes at the downstream end, is written by:
 
 .. math::
    :label: 5.10
 
-   \frac{\partial Q}{\partial x}\Big{|}_{x=5}
+   \frac{\partial Q}{\partial x}\Big{|}_{x=5} = a
 
 which is discretized as :math:`Q_{5}^{t+1} - Q_{4}^{t+1} = a \cdot dx`. The gradient at downstream end :math:`a` is approximated by the Q computed at the nodes at previous time step.
+
+Open boundary condition is written by:
+
+.. math::
+   :label: 5.11
+
+   \frac{\partial Q}{\partial t}\Big{|}_{x=5} + C \frac{\partial Q}{\partial x}\Big{|}_{x=5} = 0
+
+which is discretized as :math:`(1+\alpha C_{a}) \cdot Q_{5}^{t+1} - \alpha C_{a} \cdot Q_{4}^{t+1} = (1-(1-\alpha) C_{a}) \cdot Q_{5}^{t+1} + (1-\alpha) C_{a} \cdot Q_{4}^{t+1}`.
+
+The prognostic variable computed with diffusive wave equation solution is discharge, and the other variables such as river storage, flow depth, etc. are computed based on the computed discharge. For example, river storage is computed based on continuity equation
+
+.. math::
+   :label: 5.12
+
+   S^{t+1} = S^{t} + Qin^{t} - Q^{t} + q_{l}^{t} L
+
+where :math:`S^{t+1}` is river storage computed at current time step [m3], :math:`S^{t}` is river storage at previous time step [m3], :math:`Qin^{t}` is inflow from upstream at current time step [m3/s], :math:`L` is reach length [m].
+
+The table below summarize computational options involving diffusive wave equation solution:
+
+.. list-table:: Computational options to be considered for diffusive wave equation solution
+   :header-rows: 1
+   :widths: 20 20 20
+   :name: computational options for diffusive wave equation solution
+
+   * - Type of option
+     - Default option
+     - Available options
+   * - Number of sub-reaches (interal nodes)
+     - 20
+     - greater than 2 (1)
+   * - :math:`\alpha` (weight for space differece approximation)
+     - 1 (implicit)
+     - between 0 and 1
+   * - :math:`\beta` (weight for time difference approximation)
+     - 1 (implicit)
+     - between 0 and 1
+   * - Bottom boundary condition
+     - Neumann
+     - Neumann or open
+   * - Advection discretization scheme
+     - central difference
+     - centeral or upwind
+   * - Lateral flow input
+     - Bottom of reach
+     - Bottom or uniform along reach
 
 What makes this numerical solution become **kinematic wave solution** is simply to set *D* to zero.
 
