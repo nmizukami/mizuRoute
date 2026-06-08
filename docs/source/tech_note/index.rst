@@ -8,7 +8,9 @@ mizuRoute Technical Note
    :maxdepth: 2
 
    Intro.rst
+   overall_workflow.rst
+   overland_routing.rst
+   navigate_river_network.rst
    reach_routing.rst
    lake_routing.rst
-   navigate_river_network.rst
    diffusive_wave_derivation.rst
