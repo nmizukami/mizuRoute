@@ -32,7 +32,7 @@ Based on Eq :eq:`0.3`, the conveyance relation is written as
    Q = K\sqrt{S_f}
 
 A key point is that :math:`S_f` is not generally independent of :math:`A` in the full diffusive-wave relation, because
-:math:`h` is related to :math:`A` in Eq :eq:`1.2`. Therefore, if we take the total variation of Eq :eq:`1.3`, we can write
+:math:`h` is related to :math:`A` in Eq :eq:`1.2`. Therefore, if we take the total differentials of Eq :eq:`1.3`, we can write
 
 .. math::
    :label: 1.4
