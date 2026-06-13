@@ -8,8 +8,15 @@ MizuRoute performs reach routing scheme(s) described in :ref:`River_routing_sche
 Key parameters of river network topology are reach ID (``segId``: default name in river input netCDF) and immediate downstream reach ID (``downSegId``). Similarly, HRU has HRU id (``HRUid``) and ID of reach that runoff from this HRU flows into (``hruSegId``).
 The routing order is internally computed in mizuRoute based on the reach topology variables: ``segId`` and ``downSegId``.
 
-A example of routing order in a river basin is shown here.
+A example of routing order in a river basin is shown below. A basic rule of routing order is that given any reach, the orders of all the upstream reaches of that reach are earlier order.
 
+.. _Figure routing_processing_order:
+
+.. figure:: images/rch_order_map.gif
+ :alt: Alt routing order
+ :align: left
+
+ An Examplel of routing orders for a basin.
 
 .. _domain_decomposition:
 
