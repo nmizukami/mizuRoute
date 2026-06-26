@@ -240,8 +240,11 @@ def _create_control_files(case, caseroot, srcroot, confdir, inst_string, infile,
             fname_state_in = "empty"
 
     ctl.set( "fname_state_in", fname_state_in )
+    # Check that the restart file exists and if not see if it can be found in the run directory
     if fname_state_in is not "empty":
-        nmlgen.set_value( "fname_state_in", value=os.path.join( ancil_dir, fname_ntopOld ) )
+        if not os.path.exists(fname_state_in):
+            nmlgen.set_value( "fname_state_in", value=os.path.join( rundir, fname_state_in ) )
+            expect(os.path.exists(fname_state_in), "mizuRoute restart file does NOT exist: "+fname_state_in)
 
     # Read in the user control file for the case and change settings to it
     file_src = "user_nl_mizuroute_control"
