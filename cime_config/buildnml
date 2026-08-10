@@ -223,7 +223,7 @@ def _create_control_files(case, caseroot, srcroot, confdir, inst_string, infile,
     #----------------------------------------------------
     # Set the restart file depending on start type
     #----------------------------------------------------
-
+    # The default value is set in $CESMROOT/components/mizuRoute/route/settings/SAMPLE-coupled.control 
     fname_state_in = ctl.get("fname_state_in")
 
     if fname_state_in.strip() == '' or fname_state_in.strip() == 'STATE_IN_NC':
@@ -236,14 +236,14 @@ def _create_control_files(case, caseroot, srcroot, confdir, inst_string, infile,
                 filename = "%s.mizuroute.r.%s-%s.nc" %(run_refcase, run_refdate, run_tod)
 
             fname_state_in = filename
-        else:
+        else: # for startup run type
             fname_state_in = "empty"
 
     ctl.set( "fname_state_in", fname_state_in )
     # Check that the restart file exists and if not see if it can be found in the run directory
     if fname_state_in is not "empty":
-        if not os.path.exists(fname_state_in):
-            nmlgen.set_value( "fname_state_in", value=os.path.join( rundir, fname_state_in ) )
+        if not os.path.exists(os.path.join( rundir, fname_state_in )):
+            nmlgen.set_value( "fname_state_in", value=os.path.join(rundir, fname_state_in) )
             expect(os.path.exists(fname_state_in), "mizuRoute restart file does NOT exist: "+fname_state_in)
 
     # Read in the user control file for the case and change settings to it
