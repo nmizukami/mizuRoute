@@ -502,8 +502,7 @@ CONTAINS
 
         ! Distribute "direct runoff to ocean" to targe reach (i.e., outlet of river network)
         call shr_mpi_sparse_distribute(qSend, commRch(:)%destTask, commRch(:)%destIndex, ctl%direct(:,nt_liq), fillvalue=0._r8)
-
-        call shr_mpi_barrier(mpicom_rof)
+        call shr_mpi_barrier(mpicom_rof) ! AI says no need to call mpi barrier
 
       case default; call shr_sys_abort(trim(subname)//'unexpected bypass_routing_option')
     end select
@@ -517,8 +516,7 @@ CONTAINS
 
     ! Distribute "direct runoff to ocean" to targe reach (i.e., outlet of river network)
     call shr_mpi_sparse_distribute(qSend, commRch(:)%destTask, commRch(:)%destIndex, ctl%direct(:,nt_ice), fillvalue=0._r8)
-
-    call shr_mpi_barrier(mpicom_rof)
+    call shr_mpi_barrier(mpicom_rof) ! AI says no need to call mpi barrier
 
     ! Set ctl%qsur, ctl%qsub and ctl%qgwl to zero for nt_ice
     ctl%qsur(:,nt_ice) = 0._r8
@@ -526,6 +524,16 @@ CONTAINS
     ctl%qgwl(:,nt_ice) = 0._r8
 
     call t_stopf('mizuRoute_direct_to_outlet_land_ice')
+
+    call t_startf('mizuRoute_direct_to_outlet_glc_runoff')
+    if (ctl%rof_from_glc) then
+      ! Distribute "direct runoff to ocean" to targe reach (i.e., outlet of river network)
+      call shr_mpi_sparse_distribute(ctl%qglc_liq(:), commRch(:)%destTask, commRch(:)%destIndex, ctl%direct_glc(:,nt_liq), fillvalue=0._r8)
+      call shr_mpi_sparse_distribute(ctl%qglc_ice(:), commRch(:)%destTask, commRch(:)%destIndex, ctl%direct_glc(:,nt_ice), fillvalue=0._r8)
+    else
+      ctl%direct_glc(:,:) = 0._r8
+    end if
+    call t_stopf('mizuRoute_direct_to_outlet_glc_runoff')
 
     ! --- Transfer total runoff [mm/s] at HRUs to mizuRoute array
     call t_startf('mizuRoute_mapping_runoff')
