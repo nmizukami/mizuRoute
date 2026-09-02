@@ -79,6 +79,8 @@ contains
     call fldlist_add(fldsFrRof_num, fldsFrRof, trim(flds_scalar_name))
     call fldlist_add(fldsFrRof_num, fldsFrRof, 'Forr_rofl')
     call fldlist_add(fldsFrRof_num, fldsFrRof, 'Forr_rofi')
+    call fldlist_add(fldsFrRof_num, fldsFrRof, 'Forr_rofl_glc')
+    call fldlist_add(fldsFrRof_num, fldsFrRof, 'Forr_rofi_glc')
     call fldlist_add(fldsFrRof_num, fldsFrRof, 'Flrr_flood')
     call fldlist_add(fldsFrRof_num, fldsFrRof, 'Flrr_volr')
     call fldlist_add(fldsFrRof_num, fldsFrRof, 'Flrr_volrmch')
@@ -99,6 +101,8 @@ contains
     call fldlist_add(fldsToRof_num, fldsToRof, 'Flrl_rofsub')
     call fldlist_add(fldsToRof_num, fldsToRof, 'Flrl_rofi')
     call fldlist_add(fldsToRof_num, fldsToRof, 'Flrl_irrig')
+    call fldlist_add(fldsToRof_num, fldsToRof, 'Fgrg_rofl') ! liq runoff from glc
+    call fldlist_add(fldsToRof_num, fldsToRof, 'Fgrg_rofi') ! ice runoff from glc
 
     do n = 1,fldsToRof_num
        call NUOPC_Advertise(importState, standardName=fldsToRof(n)%stdname, &
@@ -217,6 +221,16 @@ contains
       nullify(dataptr)
     end if
 
+    if (fldchk(importState, 'Fgrg_rofl') .and. fldchk(importState, 'Fgrg_rofl')) then
+      ctl%rof_from_glc = .true.
+    else
+      ctl%rof_from_glc = .false.
+    end if
+
+    if (masterproc) then
+      write(iulog,'(A,l1)') trim(subname) //' rof from glc is ',ctl%rof_from_glc
+    end if
+
   end subroutine realize_fields
 
   !===============================================================================
@@ -269,8 +283,20 @@ contains
          do_area_correction=.true., rc=rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
 
-    ctl%qsub(begr:endr, nice) = 0.0_r8
-    ctl%qgwl(begr:endr, nice) = 0.0_r8
+    ctl%qsub(begr:endr, nice) = 0.0_r8 ! no ice from subsurface runoff
+    ctl%qgwl(begr:endr, nice) = 0.0_r8 ! no ice from qgwl runoff
+
+    if (ctl%rof_from_glc) then
+      call state_getimport(importState, 'Fgrg_rofl', begr, endr, output=ctl%qglc_liq(:), &
+           do_area_correction=.true., rc=rc)
+      if (ChkErr(rc,__LINE__,u_FILE_u)) return
+      call state_getimport(importState, 'Fgrg_rofi', begr, endr, output=ctl%qglc_ice(:), &
+           do_area_correction=.true., rc=rc)
+      if (ChkErr(rc,__LINE__,u_FILE_u)) return
+    else
+      ctl%qglc_liq(:) = 0._r8
+      ctl%qglc_ice(:) = 0._r8
+    end if
 
   end subroutine import_fields
 
@@ -364,6 +390,12 @@ contains
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
 
     call state_setexport(exportState, 'Flrr_volrmch', begr, endr, input=volrmch, do_area_correction=.true., rc=rc)
+    if (ChkErr(rc,__LINE__,u_FILE_u)) return
+
+    call state_setexport(exportState, 'Forr_rofl_glc', begr, endr, input=ctl%direct_glc(:,nliq), do_area_correction=.true., rc=rc)
+    if (ChkErr(rc,__LINE__,u_FILE_u)) return
+
+    call state_setexport(exportState, 'Forr_rofi_glc', begr, endr, input=ctl%direct_glc(:,nice), do_area_correction=.true., rc=rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
 
   end subroutine export_fields
@@ -608,7 +640,6 @@ contains
   end subroutine state_setexport
 
   !===============================================================================
-
   subroutine state_getfldptr(State, fldname, fldptr, rc)
     ! ----------------------------------------------
     ! Get pointer to a state field
@@ -665,7 +696,6 @@ contains
   end subroutine state_getfldptr
 
   !===============================================================================
-
   subroutine check_for_nans(array, fname, begg)
 
     ! uses
@@ -694,5 +724,26 @@ contains
        call shr_sys_abort(' ERROR: One or more of the output from mizuRoute to the coupler are NaN ' )
     end if
   end subroutine check_for_nans
+
+  !===============================================================================
+  logical function fldchk(state, fldname)
+    ! ----------------------------------------------
+    ! Determine if field with fldname is in the input state
+    ! ----------------------------------------------
+
+    ! input/output variables
+    type(ESMF_State), intent(in)  :: state
+    character(len=*), intent(in)  :: fldname
+
+    ! local variables
+    type(ESMF_StateItem_Flag)   :: itemFlag
+    ! ----------------------------------------------
+    call ESMF_StateGet(state, trim(fldname), itemFlag)
+    if (itemflag /= ESMF_STATEITEM_NOTFOUND) then
+       fldchk = .true.
+    else
+       fldchk = .false.
+    endif
+  end function fldchk
 
 end module rof_import_export

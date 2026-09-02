@@ -32,11 +32,14 @@ MODULE RunoffMod
     real(r8), pointer :: qgwl(:,:)        ! coupler importing glacier/wetland/lake forcing [mm/s]
     real(r8), pointer :: qirrig(:)        ! coupler importing irrigation [mm/s] - negative
     real(r8), pointer :: qirrig_actual(:) ! actual water take from river reach [mm/s]
+    real(r8), pointer :: qglc_liq(:)      ! glacier liquid runoff from coupler [mm/s]
+    real(r8), pointer :: qglc_ice(:)      ! glacier ice runoff from coupler [mm/s]
     ! export variables
     real(r8), pointer :: direct(:,:)      ! coupler return direct flow to ocean [mm/s]
     real(r8), pointer :: discharge(:,:)   ! coupler exporting river discharge [m3/s]
     real(r8), pointer :: volr(:)          ! coupler exporting river storage per unit HRU area (m)
     real(r8), pointer :: flood(:)         ! coupler exporting flood water sent back to clm [m3/s]
+    real(r8), pointer :: direct_glc(:,:)  ! direct flow to outlet from glc input [m3/s]
   CONTAINS
     procedure, public  :: init
     procedure, public  :: init_tracer_names
@@ -64,10 +67,13 @@ CONTAINS
              this%qgwl(begr:endr,nt),         &
              this%qirrig(begr:endr),          &
              this%qirrig_actual(begr:endr),   &
+             this%qglc_liq(begr:endr),        &
+             this%qglc_ice(begr:endr),        &
              this%discharge(begr:endr,nt),    &
              this%direct(begr:endr,nt),       &
              this%volr(begr:endr),            &
              this%flood(begr:endr),           &
+             this%direct_glc(begr:endr,nt),   &
              stat=ierr)
     if (ierr/=0) then
       write(iulog,*)'Rtmini ERROR allocation of runoff local arrays'
@@ -87,6 +93,7 @@ CONTAINS
     this%direct(:,:)     = 0._r8
     this%volr(:)         = 0._r8
     this%flood(:)        = 0._r8
+    this%direct_glc(:,:) = 0._r8
 
   END SUBROUTINE init
 
