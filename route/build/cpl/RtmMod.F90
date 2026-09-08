@@ -231,7 +231,7 @@ CONTAINS
     end if
 
     allocate(depth_to_vol(ctl%lnumr))
-    depth_to_vol = 1.e-3_r8*ctl%area(begr:endr)
+    depth_to_vol = 1.e-3_r8*ctl%area(ctl%begr:ctl%endr)
 
     if ( any(ctl%gindex(ctl%begr:ctl%endr) < 1) )then
       call shr_sys_abort(trim(subname)//"bad gindex < 1")
