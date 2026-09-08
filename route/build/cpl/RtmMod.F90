@@ -30,6 +30,7 @@ MODULE RtmMod
   implicit none
   logical, parameter :: verbose=.false.
   integer, parameter :: iRoute=1        ! index of routing method chosen. cesm-coupled run allows only one option (5 options available), this is always 1.
+  real(r8), allocatable :: depth_to_vol(:)  ! conversion factor based on local area [m2] from kg/m2(=mm) to m3
 
   private
   public route_ini          ! Initialize mizuRoute
@@ -229,6 +230,9 @@ CONTAINS
       call get_hru_area(NETOPO_trib, RPARAM_trib, verbose=verbose)
     end if
 
+    allocate(depth_to_vol(ctl%lnumr))
+    depth_to_vol = 1.e-3_r8*ctl%area(begr:endr)
+
     if ( any(ctl%gindex(ctl%begr:ctl%endr) < 1) )then
       call shr_sys_abort(trim(subname)//"bad gindex < 1")
     endif
@@ -380,7 +384,6 @@ CONTAINS
     real(r8)                     :: irrig_depth            ! depth of irrigation demand during time step [mm]
     real(r8)                     :: river_depth            ! depth of river water during time step [mm]
     real(r8), allocatable        :: qSend(:)               ! array holding negative lateral flow to be sent to outlet
-    real(r8), allocatable        :: mm_to_m3(:)            ! conversion factor based on local area [m2] from kg/m2(=mm) to m3
     logical                      :: finished               ! dummy arguments (not really used)
     character(len=CL)            :: cmessage               ! error message from subroutines
     integer                      :: ierr                   ! error code
@@ -439,9 +442,7 @@ CONTAINS
     call t_startf('mizuRoute_bypass_route')
 
     allocate(qSend(ctl%lnumr))
-    allocate(mm_to_m3(ctl%lnumr))
-    qSend = 0._r8
-    mm_to_m3 = 1.e-3_r8*ctl%area(begr:endr)
+    qSend = 0._r8  ! initialize with zero because changing part of qgwl, a part of qsub, and a part of qsur sequentially
 
     select case(trim(bypass_routing_option))
       case('direct_in_place')
@@ -485,7 +486,7 @@ CONTAINS
         end where
 
         ! --- convert direct unit (kg/m3/s==mm/s to m3/s)
-        ctl%direct(begr:endr, nt_liq) = ctl%direct(begr:endr, nt_liq)*mm_to_m3(begr:endr)
+        ctl%direct(begr:endr, nt_liq) = ctl%direct(begr:endr, nt_liq)*depth_to_vol(begr:endr)
 
       case('direct_to_outlet')
         ! ----  qgwl [mm/s]
@@ -507,6 +508,7 @@ CONTAINS
         end where
 
         ! Distribute "direct runoff to ocean" to targe reach (i.e., outlet of river network)
+        qSend(begr:endr) = qSend(begr:endr)*depth_to_vol(begr:endr)
         call shr_mpi_sparse_distribute(qSend, commRch(:)%destTask, commRch(:)%destIndex, ctl%direct(:,nt_liq), fillvalue=0._r8)
 
       case default; call shr_sys_abort(trim(subname)//'unexpected bypass_routing_option')
@@ -516,11 +518,8 @@ CONTAINS
 
     call t_startf('mizuRoute_direct_to_outlet_land_ice')
 
-    qSend(begr:endr) = 0._r8
-    qSend(begr:endr) = ctl%qsur(begr:endr, nt_ice) + ctl%qsub(begr:endr, nt_ice) + ctl%qgwl(begr:endr, nt_ice)
-    qSend(begr:endr) = qSend(begr:endr)*mm_to_m3(begr:endr)
-
     ! Distribute "direct runoff to ocean" to targe reach (i.e., outlet of river network)
+    qSend(begr:endr) = (ctl%qsur(begr:endr, nt_ice) + ctl%qsub(begr:endr, nt_ice) + ctl%qgwl(begr:endr, nt_ice))*depth_to_vol(begr:endr)
     call shr_mpi_sparse_distribute(qSend, commRch(:)%destTask, commRch(:)%destIndex, ctl%direct(:,nt_ice), fillvalue=0._r8)
 
     ! Set ctl%qsur, ctl%qsub and ctl%qgwl to zero for nt_ice
@@ -532,13 +531,11 @@ CONTAINS
 
     call t_startf('mizuRoute_direct_to_outlet_glc_runoff')
     if (ctl%rof_from_glc) then
-      qSend(begr:endr) = 0._r8
-      qSend(begr:endr) = ctl%qglc_liq(begr:endr)*mm_to_m3(begr:endr)
       ! Distribute "direct runoff to ocean" to targe reach (i.e., outlet of river network)
+      qSend(begr:endr) = ctl%qglc_liq(begr:endr)*depth_to_vol(begr:endr)
       call shr_mpi_sparse_distribute(qSend, commRch(:)%destTask, commRch(:)%destIndex, ctl%direct_glc(:,nt_liq), fillvalue=0._r8)
 
-      qSend(begr:endr) = 0._r8
-      qSend(begr:endr) = ctl%qglc_ice(begr:endr)*mm_to_m3(begr:endr)
+      qSend(begr:endr) = ctl%qglc_ice(begr:endr)*depth_to_vol(begr:endr)
       call shr_mpi_sparse_distribute(qSend, commRch(:)%destTask, commRch(:)%destIndex, ctl%direct_glc(:,nt_ice), fillvalue=0._r8)
     else
       ctl%direct_glc(:,:) = 0._r8
@@ -650,10 +647,10 @@ CONTAINS
       call get_river_export_data(NETOPO_trib, RCHFLX_trib)
     end if
 
-    ctl%direct(:,ctl%nt_liq) =ctl%direct(:,ctl%nt_liq) / (ctl%area(:)*0.001_r8)
-    ctl%direct(:,ctl%nt_ice) =ctl%direct(:,ctl%nt_ice) / (ctl%area(:)*0.001_r8)
-    ctl%direct_glc(:,ctl%nt_liq) =ctl%direct_glc(:,ctl%nt_liq) / (ctl%area(:)*0.001_r8)
-    ctl%direct_glc(:,ctl%nt_ice) =ctl%direct_glc(:,ctl%nt_ice) / (ctl%area(:)*0.001_r8)
+    ctl%direct(:,ctl%nt_liq) =ctl%direct(:,ctl%nt_liq) / depth_to_vol(:)
+    ctl%direct(:,ctl%nt_ice) =ctl%direct(:,ctl%nt_ice) / depth_to_vol(:)
+    ctl%direct_glc(:,ctl%nt_liq) =ctl%direct_glc(:,ctl%nt_liq) / depth_to_vol(:)
+    ctl%direct_glc(:,ctl%nt_ice) =ctl%direct_glc(:,ctl%nt_ice) / depth_to_vol(:)
 
     call t_stopf('mizuRoute_prep_export')
 
