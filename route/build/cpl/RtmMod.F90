@@ -650,6 +650,11 @@ CONTAINS
       call get_river_export_data(NETOPO_trib, RCHFLX_trib)
     end if
 
+    ctl%direct(:,ctl%nt_liq) =ctl%direct(:,ctl%nt_liq) / (ctl%area(:)*0.001_r8)
+    ctl%direct(:,ctl%nt_ice) =ctl%direct(:,ctl%nt_ice) / (ctl%area(:)*0.001_r8)
+    ctl%direct_glc(:,ctl%nt_liq) =ctl%direct_glc(:,ctl%nt_liq) / (ctl%area(:)*0.001_r8)
+    ctl%direct_glc(:,ctl%nt_ice) =ctl%direct_glc(:,ctl%nt_ice) / (ctl%area(:)*0.001_r8)
+
     call t_stopf('mizuRoute_prep_export')
 
     end associate
@@ -729,11 +734,6 @@ CONTAINS
         end if
       end do
     end do
-
-    ctl%direct(:,ctl%nt_liq) =ctl%direct(:,ctl%nt_liq) / (ctl%area(:)*0.001_r8)
-    ctl%direct(:,ctl%nt_ice) =ctl%direct(:,ctl%nt_ice) / (ctl%area(:)*0.001_r8)
-    ctl%direct_glc(:,ctl%nt_liq) =ctl%direct_glc(:,ctl%nt_liq) / (ctl%area(:)*0.001_r8)
-    ctl%direct_glc(:,ctl%nt_ice) =ctl%direct_glc(:,ctl%nt_ice) / (ctl%area(:)*0.001_r8)
 
   END SUBROUTINE
 
