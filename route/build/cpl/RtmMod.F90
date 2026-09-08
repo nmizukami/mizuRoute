@@ -723,7 +723,7 @@ CONTAINS
         end if
         if (update_q) then
           if (NETOPO_in(iRch)%DREACHI==-1 .and. NETOPO_in(iRch)%DREACHK<=0) then ! if reach is the outlet
-            ctl%discharge(ix,ctl%nt_liq) = RCHFLX_in(iRch)%ROUTE(iRoute)%REACH_Q* NETOPO_in(iRch)%HRUWGT(iHru)/(ctl%area(ix)*0.001_r8)
+            ctl%discharge(ix,ctl%nt_liq) = RCHFLX_in(iRch)%ROUTE(iRoute)%REACH_Q* NETOPO_in(iRch)%HRUWGT(iHru)/(depth_to_vol(ix))
           end if
         end if
         if (update_fld) then
